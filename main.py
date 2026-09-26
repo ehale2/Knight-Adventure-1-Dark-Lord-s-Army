@@ -1,5 +1,7 @@
+#!/usr/bin/env python3
 import pygame
 import sys
+import os
 
 pygame.init()
 
@@ -12,9 +14,12 @@ clock = pygame.time.Clock()
 player = pygame.Rect(150, 150, 50, 50)
 
 def draw():
-    screen.fill((20, 20, 20))
+    screen.blit(bg_image,(0, 0))
     pygame.draw.rect(screen, (2, 239, 238), player)
     pygame.display.flip()
+
+bg_image = pygame.image.load(os.path.join('sprites', 'game_background_1', 'game_background_1.png')).convert()
+bg_image = pygame.transform.scale(bg_image, (SCREEN_WIDTH, SCREEN_HEIGHT))
 
 status = True
 while status:
@@ -32,9 +37,8 @@ while status:
     if keys[pygame.K_d]:
         player.x += 5
 
-    player.clamp_ip(screen.get_rect())
-
     draw()
+    player.clamp_ip(screen.get_rect())
     clock.tick(60)
 
 pygame.quit()
