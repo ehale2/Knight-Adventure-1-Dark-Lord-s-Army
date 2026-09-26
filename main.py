@@ -2,6 +2,7 @@
 import pygame
 import sys
 import os
+from spritesheet import SpriteSheet
 
 pygame.init()
 
@@ -11,38 +12,97 @@ SCREEN_HEIGHT = 600
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 clock = pygame.time.Clock()
 
-# --- Load and scale the background to fit the screen's HEIGHT ---
 raw_bg = pygame.image.load(os.path.join('sprites', 'game_background_1', 'game_background_1.png')).convert()
 scale = SCREEN_HEIGHT / raw_bg.get_height()
-TILE_WIDTH = int(raw_bg.get_width() * scale)   # ~1066
+TILE_WIDTH = int(raw_bg.get_width() * scale)
 bg_image = pygame.transform.smoothscale(raw_bg, (TILE_WIDTH, SCREEN_HEIGHT))
 
-# --- Walkable path bounds, scaled down to match ---
-PATH_TOP = int(800 * scale)      # ~222
-PATH_BOTTOM = int(1620 * scale)  # ~450
 
-PLAYER_W, PLAYER_H = 16, 24
+class Player(pygame.sprite.Sprite):
+    def __init__(self, x, y, sheet_path, frame_width, frame_height, frame_count, sheet_scale, colour=None, anim_speed=6):
+        pygame.sprite.Sprite.__init__(self)
 
-# player is now PURE SCREEN-SPACE - its rect IS where it's drawn, full stop.
-# It has nothing to do with the camera anymore.
-player = pygame.Rect(SCREEN_WIDTH // 2, (PATH_TOP + PATH_BOTTOM) // 2, PLAYER_W, PLAYER_H)
+        sheet_image = pygame.image.load(sheet_path).convert_alpha()
+        self.sheet = SpriteSheet(sheet_image)
 
-# camera_x only affects the BACKGROUND now, completely independent of the player.
+        self.images = []
+        for frame in range(frame_count):
+            img = self.sheet.get_image(frame, frame_width, frame_height, sheet_scale, colour)
+            self.images.append(img)
+
+        self.index = 0
+        self.image = self.images[self.index]
+
+        # self.rect is ONLY for drawing the sprite image - not used for collision anymore
+        self.rect = self.image.get_rect()
+        self.rect.center = [x, y]
+
+        # self.hitbox is the REAL collision/movement box - tiny, centered on the sprite
+        self.hitbox = pygame.Rect(0, 0, 6, 6)
+        self.hitbox.center = self.rect.center
+
+        self.anim_speed = anim_speed
+        self.counter = 0
+        self.speed = 5
+
+    def update(self, keys, bounds_rect):
+        if keys[pygame.K_w]:
+            self.hitbox.y -= self.speed
+        if keys[pygame.K_s]:
+            self.hitbox.y += self.speed
+        if keys[pygame.K_a]:
+            self.hitbox.x -= self.speed
+        if keys[pygame.K_d]:
+            self.hitbox.x += self.speed
+
+        # clamp the tiny hitbox, NOT the big sprite rect
+        self.hitbox.clamp_ip(bounds_rect)
+
+        # sprite image just follows the hitbox around for drawing
+        self.rect.center = self.hitbox.center
+
+        self.counter += 1
+        if self.counter >= self.anim_speed:
+            self.counter = 0
+            self.index = (self.index + 1) % len(self.images)
+            self.image = self.images[self.index]
+
+
+player_group = pygame.sprite.GroupSingle()
+player = Player(
+    x=SCREEN_WIDTH // 2,
+    y=SCREEN_HEIGHT // 2,
+    sheet_path=os.path.join('sprites', 'wizard', 'Idle.png'),
+    frame_width=150,
+    frame_height=150,
+    frame_count=8,
+    sheet_scale=2,
+    colour=None
+)
+player_group.add(player)
+
 camera_x = 0
-AUTO_SCROLL_SPEED = 1.0  # pixels per frame the background drifts right on its own
+AUTO_SCROLL_SPEED = 1.0
+
+bullets = []
+cooldowns = {'wide': 0, 'laser': 0, 'bomb': 0}
+COOLDOWN_FRAMES = {'wide': 20, 'laser': 8, 'bomb': 45}
 
 
-def clamp_player(rect):
-    # vertical: stay on the path
-    if rect.top < PATH_TOP:
-        rect.top = PATH_TOP
-    if rect.bottom > PATH_BOTTOM:
-        rect.bottom = PATH_BOTTOM
-    # horizontal: stay on screen
-    if rect.left < 0:
-        rect.left = 0
-    if rect.right > SCREEN_WIDTH:
-        rect.right = SCREEN_WIDTH
+def fire_wide_shot():
+    for vy in (-4, 0, 4):
+        rect = pygame.Rect(player.rect.right, player.rect.centery - 3, 12, 6)
+        bullets.append({'rect': rect, 'vx': 9, 'vy': vy, 'type': 'wide'})
+
+
+def fire_laser():
+    rect = pygame.Rect(player.rect.right, player.rect.centery - 2, 24, 4)
+    bullets.append({'rect': rect, 'vx': 16, 'vy': 0, 'type': 'laser'})
+
+
+def fire_bomb():
+    rect = pygame.Rect(player.rect.centerx - 6, player.rect.bottom, 12, 12)
+    bullets.append({'rect': rect, 'vx': 0, 'vy': 5, 'type': 'bomb'})
 
 
 def draw_background():
@@ -55,8 +115,14 @@ def draw_background():
 
 def draw():
     draw_background()
-    # Player separate from bg
-    pygame.draw.rect(screen, (2, 239, 238), player)
+    player_group.draw(screen)
+
+    # visualize the actual hitbox (black, tiny, centered)
+    pygame.draw.rect(screen, (0, 0, 0), player.hitbox)
+
+    for b in bullets:
+        color = {'wide': (255, 255, 0), 'laser': (255, 0, 0), 'bomb': (255, 140, 0)}[b['type']]
+        pygame.draw.rect(screen, color, b['rect'])
     pygame.display.flip()
 
 
@@ -67,19 +133,27 @@ while status:
             status = False
 
     keys = pygame.key.get_pressed()
-    if keys[pygame.K_w]:
-        player.y -= 5
-    if keys[pygame.K_s]:
-        player.y += 5
-    if keys[pygame.K_a]:
-        player.x -= 5
-    if keys[pygame.K_d]:
-        player.x += 5
+    player_group.update(keys, screen.get_rect())
 
-    clamp_player(player)
+    if keys[pygame.K_o] and cooldowns['wide'] <= 0:
+        fire_wide_shot()
+        cooldowns['wide'] = COOLDOWN_FRAMES['wide']
+    if keys[pygame.K_p] and cooldowns['laser'] <= 0:
+        fire_laser()
+        cooldowns['laser'] = COOLDOWN_FRAMES['laser']
+    if keys[pygame.K_l] and cooldowns['bomb'] <= 0:
+        fire_bomb()
+        cooldowns['bomb'] = COOLDOWN_FRAMES['bomb']
 
-    # Background keeps drifting right on its own, totally independent
-    # of the player's position or movement.
+    for k in cooldowns:
+        if cooldowns[k] > 0:
+            cooldowns[k] -= 1
+
+    for b in bullets:
+        b['rect'].x += b['vx']
+        b['rect'].y += b['vy']
+    bullets = [b for b in bullets if -50 < b['rect'].x < SCREEN_WIDTH + 50]
+
     camera_x += AUTO_SCROLL_SPEED
 
     draw()
