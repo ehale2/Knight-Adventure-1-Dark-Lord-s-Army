@@ -1,4 +1,5 @@
 from .graphics_loader import IMAGE_SPRITES
+from .config import MOUSE_LEFT, MOUSE_MIDDLE, MOUSE_RIGHT
 import pygame
 
 class Sprite(pygame.sprite.Sprite):
@@ -109,3 +110,9 @@ class Sprite(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.image)
         self.index = index
         self.rotate(self.orientation)
+
+    def is_clicked(self, event):
+        if (event.type == pygame.MOUSEBUTTONDOWN and event.button == MOUSE_LEFT):
+            if (self.rect and self.rect.collidepoint(event.pos)):
+                return True
+        return False

@@ -5,17 +5,22 @@ from PIL import Image
 from .config import SCREENRECT 
 
 SPRITES = {
-    'logo': 'logo.png',
-    # backdrops
-    'backdrop': 'backdrop.png',
-    'desert': 'game_background_1.png',
-    'islands': 'game_background_2.png',
-    'corridor': 'game_background_3.png',
-    'bridge': 'game_background_4.png',
-    'ruins': 'Battleground1.png',
-    'castle': 'Battleground2.png',
-    'forest': 'Battleground3.png',
-    'crypt': 'Battleground4.png',
+    'default': {
+        'logo': 'logo.png',
+        # backdrops
+        'backdrop': 'backdrop.png',
+        'desert': 'game_background_1.png',
+        'islands': 'game_background_2.png',
+        'corridor': 'game_background_3.png',
+        'bridge': 'game_background_4.png',
+        'ruins': 'Battleground1.png',
+        'castle': 'Battleground2.png',
+        'forest': 'Battleground3.png',
+        'crypt': 'Battleground4.png',
+    },
+    'atlas': {
+        'level_select': {'file': 'buttons.png', 'top-left': (93, 323), 'size': (56, 11)}
+    }
 }
 
 IMAGE_SPRITES = {}
@@ -34,10 +39,23 @@ def import_image(asset_name: str):
 
 
 def load_all_sprites():
-    for sprite_index, sprite_name in SPRITES.items():
+    for sprite_index, sprite_name in SPRITES['default'].items():
         img = import_image(sprite_name)
         img = pygame.transform.scale(img, (SCREENRECT.width, SCREENRECT.height))
         for flipped_x in (True, False):
             for flipped_y in (True, False):
                 new_img = pygame.transform.flip(img, flip_x=flipped_x, flip_y=flipped_y)
+                IMAGE_SPRITES[(flipped_x, flipped_y, sprite_index)] = new_img
+    for sprite_index, sprite_data in SPRITES['atlas'].items():
+        sheet = import_image(sprite_data['file'])
+        crop_rect = pygame.Rect(
+            sprite_data['top-left'][0],
+            sprite_data['top-left'][1],
+            sprite_data['size'][0],
+            sprite_data['size'][1]   
+        )
+        cropped_surface = sheet.subsurface(crop_rect).copy()
+        for flipped_x in (True, False):
+            for flipped_y in (True, False):
+                new_img = pygame.transform.flip(cropped_surface, flip_x=flipped_x, flip_y=flipped_y)
                 IMAGE_SPRITES[(flipped_x, flipped_y, sprite_index)] = new_img
