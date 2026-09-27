@@ -2,10 +2,12 @@ import importlib.resources
 import pygame
 import io
 from PIL import Image
-from .config import WIDTH, HEIGHT
+from .config import SCREENRECT 
 
 SPRITES = {
-    'menu': 'bg.png',
+    'logo': 'logo.png',
+    # backdrops
+    'backdrop': 'bg.png',
     'desert': 'game_background_1.png',
     'islands': 'game_background_2.png',
     'corridor': 'game_background_3.png',
@@ -34,7 +36,7 @@ def import_image(asset_name: str):
 def load_all_sprites():
     for sprite_index, sprite_name in SPRITES.items():
         img = import_image(sprite_name)
-        img = pygame.transform.scale(img, (WIDTH, HEIGHT))
+        img = pygame.transform.scale(img, (SCREENRECT.width, SCREENRECT.height))
         for flipped_x in (True, False):
             for flipped_y in (True, False):
                 new_img = pygame.transform.flip(img, flip_x=flipped_x, flip_y=flipped_y)

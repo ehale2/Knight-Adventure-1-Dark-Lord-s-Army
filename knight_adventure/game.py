@@ -3,8 +3,13 @@
 from dataclasses import dataclass, field
 import enum
 import pygame
+import time
 from .config import SCREENRECT, FPS
 from .graphics_loader import IMAGE_SPRITES, load_all_sprites
+from .background import Background
+
+def create_surface(size=SCREENRECT.size, flags=pygame.SRCALPHA):
+    return pygame.Surface(size, flags=flags)
 
 class GameState(enum.Enum):
     unknown = 'unknown'
@@ -113,14 +118,23 @@ class GameLoop:
 class GameMenu(GameLoop):
     def loop(self):
         clock = pygame.time.Clock()
+        background = create_surface()
+        background.blit(IMAGE_SPRITES[(False, False, 'backdrop')], (0, 0))
+        group = pygame.sprite.Group()
+        logo = Background.create_from_tile(
+            groups=[group],
+            index='logo',
+            orientation=0,
+            position=self.game.screen_rect.center,
+        )
         while self.state == GameState.main_menu:
             self.handle_events()
-            self.screen.fill((30, 30, 30))
-            self.screen.blit(IMAGE_SPRITES[(False, False, 'crypt')], (0, 0))
+            self.screen.blit(background, (0, 0))
+            group.update()
+            group.draw(self.screen)
             pygame.display.flip()
             pygame.display.set_caption(f'FPS {round(clock.get_fps())}')
             clock.tick(FPS)
 
 class LevelSelect(GameLoop):
     pass
-

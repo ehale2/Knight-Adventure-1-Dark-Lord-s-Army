@@ -1,7 +1,4 @@
 import pygame
 
-WIDTH = 1280
-HEIGHT = 720
-SCREENRECT = pygame.Rect(0, 0, WIDTH, HEIGHT)
+SCREENRECT = pygame.Rect(0, 0, 1280, 720)
 FPS = 60.0
-
