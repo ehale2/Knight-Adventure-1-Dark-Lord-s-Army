@@ -51,6 +51,7 @@ class Sprite(pygame.sprite.Sprite):
         position=(0, 0),
         flipped_x=False,
         flipped_y=False,
+        size=None,
     ):
         super().__init__(groups)
         self.image = image
@@ -62,11 +63,23 @@ class Sprite(pygame.sprite.Sprite):
         self.flipped_x = flipped_x
         self.flipped_y = flipped_y
         if self.image is not None:
-            self.mask = pygame.mask.from_surface(self.image)
             self.surface = self.image.copy()
+            if size is not None:
+                self.scale(size)
+            else:
+                self.mask = pygame.mask.from_surface(self.image)
             self.rotate(self.orientation)
         if self.rect is not None and position is not None:
             self.move(position)
+
+    def scale(self, size: tuple[int, int]):
+        int_size = (int(size[0]), int(size[1]))
+        self.surface = pygame.transform.scale(self.surface, int_size)
+        old_center = self.rect.center if self.rect else (0, 0)
+        self.last_angle = None
+        self.rotate(self.orientation)
+        self.rect = self.image.get_rect(center=old_center)
+        self.mask = pygame.mask.from_surface(self.image)
 
     def move(self, position, center: bool = True):
         if center:

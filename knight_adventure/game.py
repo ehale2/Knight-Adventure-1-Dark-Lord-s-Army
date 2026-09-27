@@ -126,6 +126,7 @@ class GameMenu(GameLoop):
             index='logo',
             orientation=0,
             position=self.game.screen_rect.center,
+            size=(int(SCREENRECT.width // 2), int(SCREENRECT.height // 2))
         )
         while self.state == GameState.main_menu:
             self.handle_events()

@@ -7,7 +7,7 @@ from .config import SCREENRECT
 SPRITES = {
     'logo': 'logo.png',
     # backdrops
-    'backdrop': 'bg.png',
+    'backdrop': 'backdrop.png',
     'desert': 'game_background_1.png',
     'islands': 'game_background_2.png',
     'corridor': 'game_background_3.png',
